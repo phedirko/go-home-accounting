@@ -2,24 +2,22 @@ package repository
 
 import (
 	"database/sql"
-	"home-accounting/models"
-	"log"
+
+	"github.com/phedirko/go-home-accounting/models"
 )
 
 type PostgresRepository struct {
 	db *sql.DB
 }
 
-func init()  {
-	db, err := sql.Open("postgres", url)
-
-	if err != nil {
-		log.Printf("init error:", err)
-	}
-
+func setup(db *sql.DB) {
+	db.Exec(`CREATE TABLE months(
+			id serial PRIMARY KEY, 
+			started_on TIMESTAMP NOT NULL,
+			balance integer);`)
 }
 
-func NewPostgres(url string) (*PostgresRepository, error)  {
+func NewPostgres(url string) (*PostgresRepository, error) {
 	db, err := sql.Open("postgres", url)
 
 	if err != nil {
@@ -31,16 +29,16 @@ func NewPostgres(url string) (*PostgresRepository, error)  {
 	}, nil
 }
 
-func (r *PostgresRepository) Close()  { // read about "extension"
+func (r *PostgresRepository) close() { // read about "extension/method?"
 	r.db.Close()
 }
 
 func (r *PostgresRepository) Insert(month models.Month) error {
-	_, err := r.db.Exec("INSERT INTO months(startedAt, balance) VALUES($1, $2)", month.StartedAt, month.Balance) // read about underscore
+	_, err := r.db.Exec("INSERT INTO months(started_on, balance) VALUES($1, $2)", month.StartedAt, month.Balance) // read about underscore
 	return err
 }
 
-func (r *PostgresRepository) List()  ([]models.Month, error) {
+func (r *PostgresRepository) List() ([]models.Month, error) {
 	rows, err := r.db.Query("SELECT * FROM months ORDER BY id")
 
 	if err != nil {
@@ -52,15 +50,14 @@ func (r *PostgresRepository) List()  ([]models.Month, error) {
 
 	for rows.Next() {
 		month := models.Month{}
-		if err = rows.Scan(&month.ID, &month.StartedAt, &month.Balance, &month.FinishedAt); err == nil {
+		if err = rows.Scan(&month.ID, &month.StartedAt, &month.Balance); err == nil {
 			months = append(months, month)
 		}
 	}
 
-	if err = rows.Err(); err != nil{
+	if err = rows.Err(); err != nil {
 		return nil, err
 	}
 
-	return  months, nil
+	return months, nil
 }
-
